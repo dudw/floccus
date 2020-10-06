@@ -43,8 +43,9 @@
         margin: 60px auto;
         padding-left: 85px !important;
         background-repeat: no-repeat;
-        background-image: url("https://raw.githubusercontent.com/marcelklehr/floccus/develop/icons/logo_64.png");
+        background-image: url("https://raw.githubusercontent.com/marcelklehr/floccus/develop/icons/logo_128.png");
         background-position: 10px 45px;
+        background-size: 64px 64px;
         color: #3893cc;
         width: 200px;
       }
@@ -133,9 +134,11 @@
       @media screen and (max-width: 800px) {
         .featureGrid .box {
           width: auto;
+          margin-right: 0px;
         }
-        .text {
-          padding: 10px 30px;
+        .text,
+        .description {
+          padding: 10px 50px;
         }
         .text.bg {
           padding: 10px 30px;
