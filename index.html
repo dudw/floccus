@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title>floccus - browser bookmarks sync</title>
     <link rel="shortcut icon" href="img/logo_32.png" />
@@ -118,8 +118,13 @@
         flex-wrap: wrap;
       }
       .featureGrid .box {
-        width: 250px;
-        margin-right: 10px;
+        width: 230px;
+        margin-right: 40px;
+        text-align: justify;
+        hyphens: auto;
+      }
+      .featureGrid .box:last-child {
+        margin-right: 0px;
       }
       @media screen and (max-width: 800px) {
         .featureGrid .box {
@@ -190,11 +195,11 @@
             <p>Nextcloud is a hosted sync and share solution which also offers a bookmarks
             app, which allows you to access your bookmarks via a beautiful web UI
             and to sync them with your browser via floccus.</p>
-            <p><a href="https://github.com/nextcloud/bookmarks#readme">More about Nextcloud Bookmarks</a></p>
+            <p><a href="https://github.com/nextcloud/bookmarks#readme">More about Bookmarks</a></p>
           </div>
           <div class="box">
             <h3>WebDAV</h3>
-            <p>If you have a WebDAV file server at, like any version of nextcloud/owncloud, box.com or with any WebDAV
+            <p>If you have a WebDAV file server at, like any version of nextcloud, owncloud, box.com or with any WebDAV
               server, commercially or self-hosted, you can sync your using floccus.</p>
           </div>
           <div class="box">
