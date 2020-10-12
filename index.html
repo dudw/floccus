@@ -7,6 +7,7 @@
       href="https://fonts.googleapis.com/css?family=Comfortaa&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css">
     <meta
       name="viewport"
       content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"
@@ -31,6 +32,9 @@
       h2,
       h3 {
         color: #3893cc;
+      }
+      .mdi {
+        color: #3ca3e4;
       }
       .container > * {
         max-width: 800px;
@@ -116,7 +120,10 @@
       .footer {
       }
       .bg-blue {
-        background-color: #eaf2f7;
+        background-color: #f0f9ff;
+      }
+      .bg-dark-blue {
+        background-color: #ddf2fe;
       }
       .featureGrid {
         display: flex;
@@ -124,15 +131,28 @@
       }
       .featureGrid .box {
         width: 230px;
-        margin-right: 40px;
+        margin-right: 20px;
+        margin-bottom: 20px;
         text-align: justify;
         hyphens: auto;
       }
-      .featureGrid .box:last-child {
+      .backends .featureGrid .box {
+        margin-right: 40px;
+      }
+      .backends .featureGrid .box:last-child {
         margin-right: 0px;
       }
+      .features .featureGrid .box {
+        text-align: left;
+      }
+      .featureGrid .box .mdi::before {
+        display: block;
+        font-size: 150px;
+        text-align: center;
+        line-height: 165px;
+      }
       @media screen and (max-width: 800px) {
-        .featureGrid .box {
+        .backends .featureGrid .box {
           width: auto;
           margin-right: 0px;
         }
@@ -193,6 +213,49 @@
 
     <div class="container screenshot"></div>
 
+    <div class="container">
+      <div class="text features">
+        <div class="featureGrid">
+           <div class="box">
+             <i class="mdi mdi-folder-sync"></i>
+             <h3>Sync any local folder to any server folder</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-earth"></i>
+             <h3>Use any browser compatible with the web extension API</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-cogs"></i>
+             <h3>Create as many sync profiles as you like</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-swap-vertical"></i>
+             <h3>Support for uni- or bidirectional syncing</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-timer-outline"></i>
+             <h3>Control syncing interval</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-cog-transfer-outline"></i>
+             <h3>Easily export your configuration</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-door-closed-lock"></i>
+             <h3>Keep your credentials secure with a passphrase</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-cloud-outline"></i>
+             <h3>First class integration with Nextcloud</h3>
+           </div>
+           <div class="box">
+             <i class="mdi mdi-file-cloud-outline"></i>
+             <h3>Support for any WebDAV server</h3>
+           </div>
+         </div>
+      </div>
+    </div>
+
     <div class="container bg-blue">
       <div class="text backends bg">
         <h2>Sync backends</h2>
@@ -220,20 +283,11 @@
       </div>
     </div>
 
-    <div class="container">
-      <div class="text screenshots bg">
-        <h2>Screenshots</h2>
-        <img src="https://raw.githubusercontent.com/marcelklehr/floccus/develop/img/screen_chrome_account.png" />
-        <img src="https://raw.githubusercontent.com/marcelklehr/floccus/develop/img/screen_chrome_folderpicker.png" />
-        <img src="https://raw.githubusercontent.com/marcelklehr/floccus/develop/img/screen_chrome_options.png" />
-      </div>
-    </div>
-
-    <div class="container bg-blue">
+    <div class="container bg-dark-blue">
       <div class="text donate bg">
         <h2>Donate</h2>
         <p>
-          Fend for yourself and give something back to the creator of floccus to
+          give something back to the creator of floccus to
           support the creation and maintenance of this project financially. Any
           amount, no matter how small, is appreciated. Thank you 💙
         </p>
