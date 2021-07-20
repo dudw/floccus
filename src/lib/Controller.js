@@ -25,9 +25,11 @@ class AlarmManager {
     for (let accountId of accounts) {
       const account = await Account.get(accountId)
       const data = account.getData()
+      const lastSync = data.lastSync || 0
+      const interval = data.syncInterval || DEFAULT_SYNC_INTERVAL
       if (
         Date.now() >
-        (data.syncInterval || DEFAULT_SYNC_INTERVAL) * 1000 * 60 + data.lastSync
+        interval * 1000 * 60 + lastSync
       ) {
         // noinspection ES6MissingAwait
         this.ctl.scheduleSync(accountId)
@@ -109,6 +111,12 @@ export default class Controller {
 
   setEnabled(enabled) {
     this.enabled = enabled
+    if (enabled) {
+      // Sync after 7s
+      setTimeout(() => {
+        this.alarms.checkSync()
+      }, 7000)
+    }
   }
 
   async setKey(key) {
@@ -358,6 +366,8 @@ export default class Controller {
             syncing: false,
             error: browser.i18n.getMessage('Error027')
           })
+          // reset cache after interrupted sync
+          await acc.init()
         }
       })
     )

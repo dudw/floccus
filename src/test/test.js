@@ -245,6 +245,9 @@ describe('Floccus', function() {
             )
           })
           it('should update the server on local changes', async function() {
+            if (ACCOUNT_DATA.noCache) {
+              return this.skip()
+            }
             expect(
               (await getAllBookmarks(account)).children
             ).to.have.lengthOf(0)
@@ -682,8 +685,8 @@ describe('Floccus', function() {
               ignoreEmptyFolders(ACCOUNT_DATA)
             )
           })
-          it('should deduplicate unnormalized URLs without gettings stuck', async function() {
-            if (APP_VERSION !== 'stable') {
+          it('should deduplicate unnormalized URLs without getting stuck', async function() {
+            if (ACCOUNT_DATA.type !== 'nextcloud-folders' || (APP_VERSION !== 'stable' && APP_VERSION !== 'master' && APP_VERSION !== 'stable3')) {
               this.skip()
             }
             expect(
@@ -1052,6 +1055,9 @@ describe('Floccus', function() {
             expectTreeEqual(localTree, serverTree)
           })
           it('should remove duplicates in the same folder', async function() {
+            if (ACCOUNT_DATA.type !== 'nextcloud-folders') {
+              return this.skip()
+            }
             const localRoot = account.getData().localRoot
 
             expect(
@@ -1647,7 +1653,7 @@ describe('Floccus', function() {
               title: 'bar',
               parentId: fooFolder.id
             })
-            await [
+            await Promise.all([
               'http://ur.l/',
               'http://ur.ll/',
               'http://ur2.l/',
@@ -1663,7 +1669,7 @@ describe('Floccus', function() {
               title: 'url',
               url,
               parentId: barFolder.id
-            }))
+            })))
             await account.sync()
             expect(account.getData().error).to.not.be.ok
 
@@ -2097,6 +2103,9 @@ describe('Floccus', function() {
               )
             })
             it('should update local bookmarks on server changes', async function() {
+              if (ACCOUNT_DATA.noCache) {
+                return this.skip()
+              }
               await account.setData({ ...account.getData(), strategy: 'slave' })
               const adapter = account.server
 
@@ -2254,6 +2263,9 @@ describe('Floccus', function() {
               )
             })
             it('should update the server on local changes', async function() {
+              if (ACCOUNT_DATA.noCache) {
+                return this.skip()
+              }
               expect(
                 (await getAllBookmarks(account)).children
               ).to.have.lengthOf(0)
@@ -2502,10 +2514,14 @@ describe('Floccus', function() {
             await account2.init()
 
             if (ACCOUNT_DATA.type === 'fake') {
-            // Wrire both accounts to the same fake db
+              // Wrire both accounts to the same fake db
               account2.server.bookmarksCache = account1.server.bookmarksCache = new Folder(
                 { id: '', title: 'root', location: 'Server' }
               )
+              account2.server.__defineSetter__('highestId', (id) => {
+                account1.server.highestId = id
+              })
+              account2.server.__defineGetter__('highestId', () => account1.server.highestId)
             }
           })
           afterEach('clean up accounts', async function() {
@@ -2837,6 +2853,489 @@ describe('Floccus', function() {
             expectTreeEqual(
               serverTreeAfterFinalSync,
               tree2BeforeSecondSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+          })
+          it('should handle duplicate bookmarks in different serverRoot folders', async function() {
+            if (ACCOUNT_DATA.type !== 'nextcloud-folders') {
+              return this.skip()
+            }
+            await account1.setData({...account1.getData(), serverRoot: '/folder1'})
+            await account2.setData({...account2.getData(), serverRoot: '/folder2'})
+
+            const localRoot = account1.getData().localRoot
+            const fooFolder = await browser.bookmarks.create({
+              title: 'foo',
+              parentId: localRoot
+            })
+            const barFolder = await browser.bookmarks.create({
+              title: 'bar',
+              parentId: fooFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'url',
+              url: 'http://ur.l/',
+              parentId: barFolder.id
+            })
+
+            const localRoot2 = account2.getData().localRoot
+            const fooFolder2 = await browser.bookmarks.create({
+              title: 'foo',
+              parentId: localRoot2
+            })
+            const barFolder2 = await browser.bookmarks.create({
+              title: 'bar',
+              parentId: fooFolder2.id
+            })
+
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            await browser.bookmarks.create({
+              title: 'foo',
+              url: 'http://ur.l/',
+              parentId: barFolder2.id
+            })
+
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            const serverTree1 = await getAllBookmarks(account1)
+
+            const tree1AfterSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+            const tree2AfterSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+
+            // Note that we compare two different trees from two different server roots
+            // here, which just happen to look the same by virtue of this test
+
+            serverTree1.title = tree1AfterSync.title
+            expectTreeEqual(
+              serverTree1,
+              tree1AfterSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            expectTreeEqual(
+              tree2AfterSync,
+              tree1AfterSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+          })
+          it('should handle concurrent hierarchy reversals', async function() {
+            const localRoot = account1.getData().localRoot
+            const aFolder = await browser.bookmarks.create({
+              title: 'a',
+              parentId: localRoot
+            })
+            const bFolder = await browser.bookmarks.create({
+              title: 'b',
+              parentId: aFolder.id
+            })
+            const cFolder = await browser.bookmarks.create({
+              title: 'c',
+              parentId: localRoot
+            })
+            await browser.bookmarks.create({
+              title: 'url',
+              url: 'http://ur.l/',
+              parentId: cFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'urlalala',
+              url: 'http://ur.la/',
+              parentId: bFolder.id
+            })
+            const tree1 = await account1.localTree.getBookmarksTree(true)
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+            await account2.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            const serverTreeAfterFirstSync = await getAllBookmarks(account1)
+
+            const tree1AfterFirstSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+            const tree2AfterFirstSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+            expectTreeEqual(
+              tree1AfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            serverTreeAfterFirstSync.title = tree1.title
+            expectTreeEqual(
+              serverTreeAfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            tree2AfterFirstSync.title = tree1.title
+            expectTreeEqual(
+              tree2AfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            console.log('First round ok')
+
+            const tree2 = await account2.localTree.getBookmarksTree(true)
+
+            await browser.bookmarks.move(aFolder.id, {parentId: cFolder.id})
+            console.log(
+              'acc1: MOVE a ->c'
+            )
+
+            // ---
+
+            await browser.bookmarks.move(tree2.children.find(i => i.title === 'c').id, {parentId: tree2.children.find(i => i.title === 'a').children.find(i => i.title === 'b').id})
+            console.log(
+              'acc2: MOVE c ->b'
+            )
+
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            const serverTreeAfterThirdSync = await getAllBookmarks(account1)
+
+            const tree1AfterThirdSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+
+            serverTreeAfterThirdSync.title = tree1AfterThirdSync.title
+            expectTreeEqual(
+              serverTreeAfterThirdSync,
+              tree1AfterThirdSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+
+            console.log('Second round second half ok')
+
+            console.log('acc2: final sync')
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            const serverTreeAfterFinalSync = await getAllBookmarks(account1)
+
+            const tree2AfterFinalSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+            tree2AfterFinalSync.title = serverTreeAfterFinalSync.title
+            expectTreeEqual(
+              serverTreeAfterFinalSync,
+              tree2AfterFinalSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            tree1AfterThirdSync.title = tree2AfterFinalSync.title
+            expectTreeEqual(
+              tree2AfterFinalSync,
+              tree1AfterThirdSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+          })
+          it('should handle complex hierarchy reversals', async function() {
+            const localRoot = account1.getData().localRoot
+            const aFolder = await browser.bookmarks.create({
+              title: 'a',
+              parentId: localRoot
+            })
+            const bFolder = await browser.bookmarks.create({
+              title: 'b',
+              parentId: aFolder.id
+            })
+            const cFolder = await browser.bookmarks.create({
+              title: 'c',
+              parentId: bFolder.id
+            })
+            const dFolder = await browser.bookmarks.create({
+              title: 'd',
+              parentId: localRoot
+            })
+            const eFolder = await browser.bookmarks.create({
+              title: 'e',
+              parentId: dFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'f',
+              parentId: dFolder.id
+            })
+            const gFolder = await browser.bookmarks.create({
+              title: 'g',
+              parentId: localRoot
+            })
+            await browser.bookmarks.create({
+              title: 'url',
+              url: 'http://ur.l/',
+              parentId: bFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'urlalala',
+              url: 'http://ur.la/',
+              parentId: dFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'urlalala',
+              url: 'http://ur2.l/',
+              parentId: eFolder.id
+            })
+            const tree1 = await account1.localTree.getBookmarksTree(true)
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+            await account2.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            const serverTreeAfterFirstSync = await getAllBookmarks(account1)
+
+            const tree1AfterFirstSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+            const tree2AfterFirstSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+            expectTreeEqual(
+              tree1AfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            serverTreeAfterFirstSync.title = tree1.title
+            expectTreeEqual(
+              serverTreeAfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            tree2AfterFirstSync.title = tree1.title
+            expectTreeEqual(
+              tree2AfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            console.log('First round ok')
+
+            const tree2 = await account2.localTree.getBookmarksTree(true)
+
+            await browser.bookmarks.move(aFolder.id, {parentId: gFolder.id})
+            console.log(
+              'acc1: MOVE a ->g'
+            )
+            await browser.bookmarks.move(dFolder.id, {parentId: cFolder.id})
+            console.log(
+              'acc1: MOVE d ->c'
+            )
+
+            // ---
+
+            await browser.bookmarks.move(tree2.children.find(i => i.title === 'a').children.find(i => i.title === 'b').children.find(i => i.title === 'c').id, {parentId: tree2.children.find(i => i.title === 'd').children.find(i => i.title === 'f').id})
+            console.log(
+              'acc2: MOVE c ->f'
+            )
+
+            await browser.bookmarks.move(tree2.children.find(i => i.title === 'a').children.find(i => i.title === 'b').id, {parentId: tree2.children.find(i => i.title === 'd').children.find(i => i.title === 'e').id})
+            console.log(
+              'acc2: MOVE b ->e'
+            )
+
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            const serverTreeAfterThirdSync = await getAllBookmarks(account1)
+
+            const tree1AfterThirdSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+
+            serverTreeAfterThirdSync.title = tree1AfterThirdSync.title
+            expectTreeEqual(
+              serverTreeAfterThirdSync,
+              tree1AfterThirdSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+
+            console.log('Second round second half ok')
+
+            console.log('acc2: final sync')
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            const serverTreeAfterFinalSync = await getAllBookmarks(account1)
+
+            const tree2AfterFinalSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+            tree2AfterFinalSync.title = serverTreeAfterFinalSync.title
+            expectTreeEqual(
+              serverTreeAfterFinalSync,
+              tree2AfterFinalSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            tree1AfterThirdSync.title = tree2AfterFinalSync.title
+            expectTreeEqual(
+              tree2AfterFinalSync,
+              tree1AfterThirdSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+          })
+          it('should handle faux hierarchy reversals', async function() {
+            const localRoot = account1.getData().localRoot
+            const aFolder = await browser.bookmarks.create({
+              title: 'a',
+              parentId: localRoot
+            })
+            const bFolder = await browser.bookmarks.create({
+              title: 'b',
+              parentId: localRoot
+            })
+            const cFolder = await browser.bookmarks.create({
+              title: 'c',
+              parentId: bFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'd',
+              parentId: localRoot
+            })
+            const eFolder = await browser.bookmarks.create({
+              title: 'e',
+              parentId: localRoot
+            })
+            await browser.bookmarks.create({
+              title: 'url',
+              url: 'http://ur.l/',
+              parentId: cFolder.id
+            })
+            await browser.bookmarks.create({
+              title: 'urlalala',
+              url: 'http://ur.la/',
+              parentId: bFolder.id
+            })
+            const tree1 = await account1.localTree.getBookmarksTree(true)
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+            await account2.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            const serverTreeAfterFirstSync = await getAllBookmarks(account1)
+
+            const tree1AfterFirstSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+            const tree2AfterFirstSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+            expectTreeEqual(
+              tree1AfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            serverTreeAfterFirstSync.title = tree1.title
+            expectTreeEqual(
+              serverTreeAfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            tree2AfterFirstSync.title = tree1.title
+            expectTreeEqual(
+              tree2AfterFirstSync,
+              tree1,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            console.log('First round ok')
+
+            const tree2 = await account2.localTree.getBookmarksTree(true)
+
+            await browser.bookmarks.move(aFolder.id, {parentId: cFolder.id})
+            console.log(
+              'acc1: MOVE a ->c'
+            )
+
+            await browser.bookmarks.remove(eFolder.id)
+            console.log(
+              'acc1: REMOVE e'
+            )
+
+            // ---
+
+            const newFolder = await browser.bookmarks.create({
+              title: 'new',
+              parentId: tree2.children.find(i => i.title === 'e').id
+            })
+            await browser.bookmarks.create({
+              title: 'urlabyrinth',
+              url: 'http://ur2.l/',
+              parentId: newFolder.id
+            })
+            console.log('acc2: CREATE new ->e')
+
+            await browser.bookmarks.move(tree2.children.find(i => i.title === 'b').children.find(i => i.title === 'c').id, {parentId: newFolder.id})
+            console.log(
+              'acc2: MOVE c ->new'
+            )
+
+            await browser.bookmarks.move(tree2.children.find(i => i.title === 'b').id, {parentId: tree2.children.find(i => i.title === 'a').id})
+            console.log(
+              'acc2: MOVE b ->a'
+            )
+
+            await browser.bookmarks.move(tree2.children.find(i => i.title === 'e').id, {parentId: tree2.children.find(i => i.title === 'd').id})
+            console.log(
+              'acc2: MOVE e ->d'
+            )
+
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            await account1.sync()
+            expect(account1.getData().error).to.not.be.ok
+
+            const serverTreeAfterThirdSync = await getAllBookmarks(account1)
+
+            const tree1AfterThirdSync = await account1.localTree.getBookmarksTree(
+              true
+            )
+
+            serverTreeAfterThirdSync.title = tree1AfterThirdSync.title
+            expectTreeEqual(
+              serverTreeAfterThirdSync,
+              tree1AfterThirdSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+
+            console.log('Second round second half ok')
+
+            console.log('acc2: final sync')
+            await account2.sync()
+            expect(account2.getData().error).to.not.be.ok
+
+            const serverTreeAfterFinalSync = await getAllBookmarks(account1)
+
+            const tree2AfterFinalSync = await account2.localTree.getBookmarksTree(
+              true
+            )
+            tree2AfterFinalSync.title = serverTreeAfterFinalSync.title
+            expectTreeEqual(
+              serverTreeAfterFinalSync,
+              tree2AfterFinalSync,
+              ignoreEmptyFolders(ACCOUNT_DATA)
+            )
+            tree1AfterThirdSync.title = tree2AfterFinalSync.title
+            expectTreeEqual(
+              tree2AfterFinalSync,
+              tree1AfterThirdSync,
               ignoreEmptyFolders(ACCOUNT_DATA)
             )
           })

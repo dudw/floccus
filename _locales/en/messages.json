@@ -149,8 +149,8 @@
   "LabelCancelsync": {
     "message": "Cancel sync"
   },
-  "LabelEnabled": {
-    "message": "Enabled"
+  "LabelAutosync": {
+    "message": "Auto-sync"
   },
   "StatusLastsynced": {
     "message": "Last synchronized: $1 ago"
@@ -258,7 +258,7 @@
     "message": "Fund development"
   },
   "DescriptionFunddevelopment": {
-    "message": "I'm using this opportunity to ask you for a donation in order to support the maintenance of this project and make this endeavor more sustainable. You can find the supported payment providers below. Any amount is appreciated. Thank you!💙"
+    "message": "Work on floccus is fuelled by a voluntary subscription model. If you think what I do is worthwhile, and if you can spare a few coins each month without hardship, please support my work. Also, please consider giving floccus a rating on the addon store of your choice. Thank you!💙"
   },
   "LabelSelect": {
     "message": "Select"
@@ -409,10 +409,19 @@
     "message": "Tabs"
   },
   "LabelSyncDown": {
-    "message": "Pull sync: Override local changes"
+    "message": "Pull sync"
   },
   "LabelSyncUp": {
-    "message": "Push sync: Override server-side changes"
+    "message": "Push sync"
+  },
+  "LabelSyncDownOnce": {
+    "message": "Pull sync once"
+  },
+  "LabelSyncUpOnce": {
+    "message": "Push sync once"
+  },
+  "LabelSyncNormal": {
+    "message": "Normal sync"
   },
   "DescriptionFilesPermission": {
     "message": "Make sure you give floccus permission to not only use the bookmarks app but the Nextcloud files app as well."
